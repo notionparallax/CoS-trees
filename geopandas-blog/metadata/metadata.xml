@@ -1,0 +1,214 @@
+<metadata>
+  <idinfo>
+    <citation>
+      <citeinfo>
+        <origin>Minnesota Department of Natural Resources (DNR), Section of Wildlife</origin>
+        <pubdate>2004-04-19 00:00:00.0</pubdate>
+        <title>State Wildlife Management Area Public Facilities</title>
+        <pubinfo>
+          <publish>Minnesota DNR - Section of Wildlife</publish>
+        </pubinfo>
+        <onlink>http://gisdata.mn.gov/dataset/struc-dnr-wld-mgmt-areas-pub</onlink>
+      </citeinfo>
+    </citation>
+    <descript>
+      <abstract>WMAs are part of the Minnesota state recreation system created to protect wildlife habitat and provide wildlife-based recreation. Facilities and features are labeled based on a hierarchical classification system developed by the MN DNR, Section of Wildlife.
+
+The line layer contain facilities and features for WMAs that are best represented as lines. Line features may represent any facility or feature that may need to show the length and direction of the feature.  Several examples of  features that may be represented as lines include roads and trails, fence, dike, ditch or stream, drainage tile, fire breaks, water control structures, gates, culverts, bridges, docks, and utility or rail road lines.
+
+The point layer contains facilities and features for WMAs that are best represented as points. Several examples of features that may be represented as points include parking lots, water access, signs, gates, bridges, camping facilities, blinds, water control structures, feeding structures, nesting and breeding structures, buildings, reference points and cultural features. 
+
+Disclaimer: The only features in this theme are WMA user facilities such as parking lots, water accesses, trails and blinds.  WMA management facilities such as water control structures, restricted roads, gates and habitat structures have been removed from this layer.
+
+The facility layer should be accurate enough to provide information for management and planning activities as well as for general reference on maps. The classification system used in this inventory is intended to accurately describe the facility or feature at the time of the inventory as well as its future condition given that money is available to maintain that facility or feature. There may be plans to develop the facility to improve public access or improve habitat for desired wildlife species.
+ 
+WMAs have restrictions on types of public use, therefore creating maps of WMAs as general recreation or hunting areas has some peril. Some portions of WMAs are wildlife sanctuaries, some WMAs are only open to public use during certain times of the year, some require landowner permission for access and some WMAs are legally closed to the public.</abstract>
+      <purpose>Wildlife staff will use the WMA facilities and features layers for managing wildlife habitat on WMAs; local mapping, contracting for maintenance and development projects, visitor use maps, management use maps, project planning and acquisition planning. The layers will also be used for public information about the public use facilities that can be found on WMAs. WMAs are included in the Recreation Compass on the DNR web site, which can be accessed by the public to print maps of public use facilities found on a particular WMA.</purpose>
+      <supplinf>
+        </supplinf>
+    </descript>
+    <timeperd>
+      <timeinfo>
+        <sngdate>
+          <caldate>20190104</caldate>
+        </sngdate>
+      </timeinfo>
+      <current>Time Period of Content date indicates the date which the user can be confident of accuracy and completeness of the dataset.</current>
+    </timeperd>
+    <status>
+      <progress>Complete</progress>
+      <update>Continually</update>
+    </status>
+    <spdom>
+      <bounding>
+        <westbc>-96.624408</westbc>
+        <eastbc>-89.864486</eastbc>
+        <northbc>49.015377</northbc>
+        <southbc>43.445832</southbc>
+      </bounding>
+    </spdom>
+    <keywords>
+      <theme>
+        <themekey>Public Use Facilities, User Facilities, Management Facilities, Features, transportation</themekey>
+        <themekt>
+          </themekt>
+      </theme>
+      <place>
+        <placekey>Minnesota, Wildlife Management Areas, WMA, WMAs, Wildlife Lands, State Lands</placekey>
+      </place>
+    </keywords>
+    <accconst>No special restrictions beyond those described in the Minnesota Department of Natural Resources General Geographic Data License Agreement</accconst>
+    <useconst>No special restrictions beyond those described in the Minnesota Department of Natural Resources General Geographic Data License Agreement</useconst>
+    <native>ArcView 3.3</native>
+    <browse>
+      <browsen>ftp://ftp.gisdata.mn.gov/pub/gdrs/data/pub/us_mn_state_dnr/struc_dnr_wld_mgmt_areas_pub/metadata/preview.jpg</browsen>
+    </browse>
+    <crossref>
+      <citeinfo>
+        <title>
+          </title>
+      </citeinfo>
+    </crossref>
+    <ptcontac>
+      <cntinfo>
+        <cntperp>
+          <cntorg>Minnesota DNR - Division of Fish and Wildlife - Wildlife Unit</cntorg>
+          <cntper>Bruce Anderson</cntper>
+        </cntperp>
+        <cntpos>GIS Support Specialist</cntpos>
+        <cntaddr>
+          <addrtype>Mailing and Physical</addrtype>
+          <address>1201 East Hwy 2</address>
+          <city>Grand Rapids</city>
+          <state>MN</state>
+          <postal>55744</postal>
+        </cntaddr>
+        <cntvoice>(218) 327-4105</cntvoice>
+        <cntfax>(218) 327-4263</cntfax>
+        <cntemail>bruce.j.anderson@state.mn.us</cntemail>
+      </cntinfo>
+    </ptcontac>
+  </idinfo>
+  <dataqual>
+    <logic>Data are topologically correct using ArcMap. All lines intersect where intended.</logic>
+    <complete>Facilities and features are nearly complete for most of the state. Facilities and features that are not complete and verified are not included in this database.
+
+
+Note: The only features in this theme are WMA user facilities such as parking lots, water accesses, trails and blinds.  WMA management facilities such as water control structures, restricted roads, gates and habitat structures have been removed from this layer.</complete>
+    <posacc>
+      <horizpa>
+        <horizpar>No Assessment at this time
+</horizpar>
+      </horizpa>
+      <vertacc>
+        <vertaccr>Not Applicable
+</vertaccr>
+      </vertacc>
+    </posacc>
+    <lineage>
+      <procstep>
+        <procdesc>Area Wildlife staff used the MN DNR, Section of Wildlife, Facilities/Features Classification System to code facilities on the DOQ maps or by populating the attribute table in ArcView.  Other facility attributes were filled out with the assistance of the "Wildlife Management Area/Geographic Information System Project Standards".  For area offices that drew on maps, GIS specialists heads up digitized facilities or features and then populated the attribute table in ArcView.
+</procdesc>
+      </procstep>
+    </lineage>
+    <attracc>
+      <attraccr>The program project codes designating WMAs have been identified accurately. Facility or feature classification is verified by Area Wildlife Staff.  Other attributes have varying levels of accuracy.
+</attraccr>
+    </attracc>
+  </dataqual>
+  <spdoinfo>
+    <indspref>Not Applicable</indspref>
+    <direct>vector</direct>
+    <mgmg3obj>line</mgmg3obj>
+    <mgmg3til>state</mgmg3til>
+  </spdoinfo>
+  <spref>
+    <vertdef>
+      <altsys>
+        <altdatum>Not Applicable</altdatum>
+        <altunits>Not Applicable</altunits>
+      </altsys>
+      <depthsys>
+        <depthdn>Not Applicable</depthdn>
+        <depthdu>Not Applicable</depthdu>
+      </depthsys>
+    </vertdef>
+    <horizsys>
+      <planar>
+        <gridsys>
+          <gridsysn>Universal Transverse Mercator</gridsysn>
+          <utm>
+            <utmzone>15</utmzone>
+          </utm>
+        </gridsys>
+        <planci>
+          <plandu>meters</plandu>
+        </planci>
+      </planar>
+      <geodetic>
+        <horizdn>NAD83</horizdn>
+        <ellips>GRS80</ellips>
+      </geodetic>
+    </horizsys>
+  </spref>
+  <eainfo>
+    </eainfo>
+  <distinfo>
+    <resdesc>struc_dnr_wld_mgmt_areas_pub</resdesc>
+    <distliab>The Minnesota Department of Natural Resources General Geographic Data License Agreement is online: http://www.dnr.state.mn.us/sitetools/data_software_license.html</distliab>
+    <stdorder>
+      <digform>
+        <digtinfo>
+          <formname>Shapefile</formname>
+          <formvern>Not Applicable</formvern>
+          <transize>1024</transize>
+        </digtinfo>
+      </digform>
+      <ordering>Please visit the download page for this dataset on the Minnesota Geospatial Commons website using the web link below (Online Linkage).</ordering>
+    </stdorder>
+    <distrib>
+      <cntinfo>
+        <cntperp>
+          <cntorg>Minnesota Department of Natural Resources</cntorg>
+          <cntper>Zeb Thomas</cntper>
+        </cntperp>
+        <cntpos>GIS Data Systems Coordinator</cntpos>
+        <cntaddr>
+          <address>500 Lafayette Rd</address>
+          <city>Saint Paul</city>
+          <state>MN</state>
+          <postal>55155</postal>
+        </cntaddr>
+        <cntvoice>651-259-5637</cntvoice>
+        <cntemail>zeb.thomas@state.mn.us</cntemail>
+      </cntinfo>
+    </distrib>
+  </distinfo>
+  <metainfo>
+    <metd>20160601</metd>
+    <metstdn>Minnesota Geographic Metadata Guidelines</metstdn>
+    <metstdv>1.2</metstdv>
+    <metextns>
+      <onlink>http://www.mngeo.state.mn.us/committee/standards/mgmg/metadata.htm</onlink>
+    </metextns>
+    <metc>
+      <cntinfo>
+        <cntperp>
+          <cntorg>Minnesota DNR - Division of Fish and Wildlife - Wildlife Unit</cntorg>
+          <cntper>Bruce Anderson</cntper>
+        </cntperp>
+        <cntpos>GIS Support Specialist</cntpos>
+        <cntaddr>
+          <addrtype>Mailing and Physical</addrtype>
+          <address>1201 East Hwy 2</address>
+          <city>Grand Rapids</city>
+          <state>MN</state>
+          <postal>55744</postal>
+        </cntaddr>
+        <cntvoice>(218) 327-4105</cntvoice>
+        <cntfax>(218) 327-4263</cntfax>
+        <cntemail>bruce.j.anderson@state.mn.us</cntemail>
+      </cntinfo>
+    </metc>
+  </metainfo>
+</metadata>
