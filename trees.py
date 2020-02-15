@@ -24,7 +24,12 @@ import shapely
 import time
 
 #%%
-plt.rcParams["figure.figsize"] = [39/2.54, 49/2.54]
+res_multiplier = 1
+cm_to_inch = 2.54
+plt.rcParams["figure.figsize"] = [
+    (39 / cm_to_inch) * res_multiplier,
+    (49 / cm_to_inch) * res_multiplier,
+]
 
 #%% This shows that we're realing with coords and a species.
 # There isn't a tree ID or any other tree metadata, but that might be a feature
@@ -1072,8 +1077,31 @@ plt.legend(
 )
 plt.xticks(fontsize=6)
 plt.yticks(fontsize=6)
-plt.title(f"{gdf.shape[0]} Trees in the City of Sydney (2017 data)")
-plt.savefig("all_tree_map", bbox_inches="tight")
+title = f"{gdf.shape[0]} Trees in the City of Sydney (2017 data)"
+plt.title(title)
+metadata = {
+    "Title": title,
+    "Author": "Ben Doherty",
+    "Description": """All trees in the City of sydney, as derived from a freedom 
+                            of information act request in 2017 by Luke Bacon (@equivalentideas)
+                            https://www.righttoknow.org.au/request/tree_data#incoming-6569
+                            
+                            It misses the trees managed by Parks NSW, USYD, and the 
+                            Royal Botanic Gardens, as well as trees on private property.""",
+    "Copyright": "",
+    "Creation Time": "Fri, 7 Feb 2020 23:45:00 AEST",
+    "Software": "Matplotlib",
+    "Disclaimer": "",
+    "Warning": "",
+    "Source": "Dell Inspiron, VS Code",
+    "Comment": "",
+}
+plt.savefig(
+    "all_tree_map", bbox_inches="tight", dpi=600, metadata=metadata, format="png"
+)
+plt.savefig(
+    "all_tree_map", bbox_inches="tight", dpi=600, metadata=metadata, format="svg"
+)
 
 #%%
 # import contextily as ctx
