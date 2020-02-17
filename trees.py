@@ -2649,10 +2649,10 @@ metadata = {
     "Comment": "",
 }
 plt.savefig(
-    "all_tree_map", bbox_inches="tight", dpi=600, metadata=metadata, format="png"
+    "all_tree_map.png", bbox_inches="tight", dpi=600, metadata=metadata, format="png"
 )
 plt.savefig(
-    "all_tree_map", bbox_inches="tight", dpi=600, metadata=metadata, format="svg"
+    "all_tree_map.svg", bbox_inches="tight", dpi=600, metadata=metadata, format="svg"
 )
 
 #%%
