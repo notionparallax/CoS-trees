@@ -2602,34 +2602,34 @@ for m in markers:
 shuffle(idents)
 print(f"there are {len(idents)} possible idents and {len(tree_counts)} types of tree")
 #%%
-syd_map = syd.plot(color="ghostwhite", edgecolor="black")
-plt.xlim((151.17,151.28))
-plt.ylim((-33.925, -33.845))
+syd_map = syd.plot(color="ghostwhite", edgecolor="white")
+plot_tight_on_CoS = False
+if plot_tight_on_CoS:
+    plt.xlim((151.17, 151.28))
+    plt.ylim((-33.925, -33.845))
+else:
+    plt.xlim((151.05, 151.3))
+    plt.ylim((-33.95, -33.75))
 # print(plt.axis())
 for i, x in enumerate(tree_counts.iteritems()):
     tree = x[0]
     count = x[1]
     temp_df = gdf[gdf.species == tree]
     try:
-        common_name = "—"+tree_common_names[tree][0].title()
+        common_name = "—" + tree_common_names[tree][0].title()
     except:
         common_name = ""
     label = r"$\it{" + tree + "}$" + f"{common_name} ({count})" if count >= 50 else None
     temp_df.plot(
-        ax=syd_map, 
-        color=idents[i]["c"], 
-        marker=idents[i]["m"], 
-        alpha=0.4, 
-        label=label, 
-        markersize=3
+        ax=syd_map,
+        color=idents[i]["c"],
+        marker=idents[i]["m"],
+        alpha=0.4,
+        label=label,
+        markersize=3,
     )
 
-plt.legend(
-    loc="upper right", 
-    markerscale=2, 
-    prop={'size': 6},
-    labelspacing=0
-)
+plt.legend(loc="upper right", markerscale=2, prop={"size": 6}, labelspacing=0)
 plt.xticks(fontsize=6)
 plt.yticks(fontsize=6)
 title = f"{gdf.shape[0]} Trees in the City of Sydney (2017 data)"
@@ -2665,3 +2665,6 @@ plt.savefig(
 # ctx.add_basemap(ax, url=ctx.providers.Stamen.TonerLite)
 # ax.set_axis_off()
 # %%
+# this data is from the opentrees.org website
+SB_df = pd.read_csv("alltrees.csv")
+SB_df.sample(10)  # .to_html()
