@@ -35,7 +35,7 @@ plt.rcParams["figure.figsize"] = [
 # There isn't a tree ID or any other tree metadata, but that might be a feature
 # of the wording of the FOI request that produced the data.
 # There's a LOT of trees!.
-df = pd.read_excel("Street tree data.xlsx")
+df = pd.read_excel(os.path.join("in","Street tree data.xlsx"))
 df.feat_cent_east = df.feat_cent_east.astype(float)
 df.feat_cent_north = df.feat_cent_north.astype(float)
 print(df.columns)
@@ -2666,5 +2666,5 @@ plt.savefig(
 # ax.set_axis_off()
 # %%
 # this data is from the opentrees.org website
-SB_df = pd.read_csv("alltrees.csv")
+SB_df = pd.read_csv(os.path.join("in", "alltrees.csv"))
 SB_df.sample(10)  # .to_html()
