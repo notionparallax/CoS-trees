@@ -106,18 +106,21 @@ gdf.distance_from_middle.hist(bins=30)
 #%% if we look at the outliers we'll see that 2 of them just have zeroes, and
 # one has probably been typed in missing some numbers, probably should be
 # 11333093.0, not 333093.0
-gdf[gdf.distance_from_middle > 0.1]
+gdf[gdf.distance_from_middle > 0.3]
 #%% But, as it's only a few trees, and we don't have tree IDs to be able to go
 # back and find out what it's supposed to be, let's just can them.
-gdf = gdf[gdf.distance_from_middle < 0.1]
+cropped_gdf = gdf[gdf.distance_from_middle < 1]
 
 #%% If we plot that onto a filtered set of suburbs:
 aus_poas["distance_from_middle"] = aus_poas.geometry.distance(middle)
-syd = aus_poas[aus_poas.distance_from_middle < 0.05]
+syd = aus_poas[aus_poas.distance_from_middle < 0.18]
 syd_map = syd.plot(color="ghostwhite", edgecolor="black")
-gdf.plot(ax=syd_map, color="r", marker=".", alpha=0.1)
+cropped_gdf.plot(ax=syd_map, color="r", marker=".", alpha=0.1)
 plt.savefig("all_trees", bbox_inches="tight")
 
+
+#%%
+gdf.species = [x if type(x) is str else "unknown" for x in gdf.species]
 #%% that's a lot of trees!
 # What about just figs?
 figs = {
