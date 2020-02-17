@@ -48,7 +48,7 @@ df.species.value_counts()[:top].plot(rot=90, kind="bar")
 plt.title(f"Top {top} most common trees in Sydney")
 plt.savefig(f"Top {top} most common trees in Sydney", bbox_inches="tight")
 #%%
-loners = df.species.value_counts()[df.species.value_counts()==1]
+loners = df.species.value_counts()[df.species.value_counts() == 1]
 print(len(loners), ", ".join(loners.index))
 
 #%% These numbers are in northings and eastings,
