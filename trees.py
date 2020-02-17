@@ -68,6 +68,17 @@ def make_pt(row):
     return p
 
 
+def load_ryde_data():
+    gdf = geopandas.read_file(os.path.join("in", "ryde", "public-trees-2013.shp"))
+    geometry = gdf.geometry
+    geometry.crs = {"init": "epsg:28356", "no_defs": True}
+    geometry = geometry.to_crs(epsg=4326)
+    gdf["geometry"] = geometry
+    gdf["species"] = gdf.apply(lambda x: "unknown")
+    # gdf.plot(column="Height", legend=True, markersize=2)
+    return gdf
+
+
 world = geopandas.read_file(geopandas.datasets.get_path("naturalearth_lowres"))
 aus = world[world.name == "Australia"].plot()
 
@@ -76,6 +87,7 @@ geometry.crs = {"init": "epsg:28356", "no_defs": True}
 geometry = geometry.to_crs(epsg=4326)
 gdf = geopandas.GeoDataFrame(df)
 gdf["geometry"] = geometry
+gdf = gdf.append(load_ryde_data())
 gdf.plot(ax=aus, c="r")
 
 #%% Let's work out where we are in the world.
