@@ -80,6 +80,28 @@ def load_ryde_data():
     return gdf
 
 
+def load_RBG_data():
+    all_BGCP_dataframes = []
+    for file_name, short_name in [
+        ("BGCP-AustralianBotanicGardens-MtAnnanTreeList.xlsx", "Mt Annan"),
+        ("BGCP-BlueMountainsBotanicGardens-TomahTreeList.xlsx", "Mt Tomah"),
+        ("BGCP-CentennialParklandsTreeList.xlsx", "Centennial Parklands"),
+        ("BGCP-RoyalBotanicGarden-SydneyTreeList.xlsx", "Royal Botanic Garden"),
+    ]:
+        path = os.path.join("in", "RBG", file_name)
+        df = pd.read_excel(path, skiprows=3)
+        df["data_source"] = path
+        df["data_source_short"] = short_name
+        df.rename(columns={"GenusSpecies": "species"}, inplace=True)
+        all_BGCP_dataframes.append(df)  # appending to a list, not a pandas op
+        # gdf.plot()
+        # plt.title(short_name)
+    df = pd.concat(all_BGCP_dataframes)
+    gdf = geopandas.GeoDataFrame(
+        df, geometry=[Point(xy) for xy in zip(df.ItemCoordLongDD, df.ItemCoordLatDD)]
+    )
+
+
 world = geopandas.read_file(geopandas.datasets.get_path("naturalearth_lowres"))
 aus = world[world.name == "Australia"].plot()
 
@@ -89,6 +111,7 @@ geometry = geometry.to_crs(epsg=4326)
 gdf = geopandas.GeoDataFrame(df)
 gdf["geometry"] = geometry
 gdf = gdf.append(load_ryde_data())
+gdf = gdf.append(load_RBG_data())
 gdf.plot(ax=aus, c="r")
 
 #%% Let's work out where we are in the world.
