@@ -178,33 +178,12 @@ plt.savefig("fig_tree_map", bbox_inches="tight")
 
 #%% can we make that red splodge of trees any easier to understand?
 tree_counts = gdf.species.value_counts()
+# fmt: off
 markers = [  # see https://matplotlib.org/api/markers_api.html
-    ".",
-    ",",
-    "o",
-    "v",
-    "^",
-    "<",
-    ">",
-    "1",
-    "2",
-    "3",
-    "4",
-    "8",
-    "s",
-    "p",
-    "P",
-    "*",
-    "h",
-    "H",
-    "+",
-    "x",
-    "X",
-    "D",
-    "d",
-    "|",
-    "_",
-]
+    ".",",","o","v","^","<",">","1","2","3","4","8","s",  #
+    "p","P","*","h","H","+","x","X","D","d","|","_"]
+# fmt: on
+
 tab = list(mcolors.TABLEAU_COLORS.keys())
 base = list(mcolors.BASE_COLORS.keys())
 tab.extend(base)
