@@ -8,7 +8,8 @@ from datetime import datetime
 from matplotlib import font_manager as fm, rcParams
 from pandas.api.types import CategoricalDtype
 from random import shuffle
-from shapely.geometry import Point
+from shapely.geometry import Point, LineString, Polygon
+from tree_common_to_latin_names_map import tree_common_names
 import geopandas
 import matplotlib as mpl
 import matplotlib.colors as mcolors
@@ -22,7 +23,6 @@ import re
 import requests
 import shapely
 import time
-from tree_common_to_latin_names_map import tree_common_names
 
 #%%
 res_multiplier = 1
