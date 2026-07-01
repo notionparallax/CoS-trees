@@ -10,6 +10,7 @@ from pandas.api.types import CategoricalDtype
 from random import shuffle
 from shapely.geometry import Point, LineString, Polygon
 from tree_common_to_latin_names_map import tree_common_names
+import geodatasets
 import geopandas
 import matplotlib as mpl
 import matplotlib.colors as mcolors
@@ -36,6 +37,17 @@ plt.rcParams["figure.figsize"] = [
 # There isn't a tree ID or any other tree metadata, but that might be a feature
 # of the wording of the FOI request that produced the data.
 # There's a LOT of trees!.
+#
+# OPTION A (new): load live data from the City of Sydney ArcGIS open data portal.
+# This is the official asset register, updated regularly, and includes height,
+# canopy width, age, DBH and common name — far richer than the 2017 FOI data.
+# It is already in WGS84 (EPSG:4326) so no projection conversion is needed.
+#
+#   df = geopandas.read_file("https://opendata.arcgis.com/datasets/cityofsydney::trees.geojson")
+#   if "species" not in df.columns and "Species" in df.columns:
+#       df = df.rename(columns={"Species": "species"})
+#
+# OPTION B (legacy): load from the original 2017 FOI spreadsheet.
 df = pd.read_excel(os.path.join("in", "CoS", "Street tree data.xlsx"))
 df.feat_cent_east = df.feat_cent_east.astype(float)
 df.feat_cent_north = df.feat_cent_north.astype(float)
@@ -69,12 +81,10 @@ def make_pt(row):
     return p
 
 
-world = geopandas.read_file(geopandas.datasets.get_path("naturalearth_lowres"))
+world = geopandas.read_file(geodatasets.get_path("naturalearth lowres"))
 aus = world[world.name == "Australia"].plot()
 
-geometry = geopandas.GeoSeries(df.apply(make_pt, axis=1))
-geometry.crs = {"init": "epsg:28356", "no_defs": True}
-geometry = geometry.to_crs(epsg=4326)
+geometry = geopandas.GeoSeries(df.apply(make_pt, axis=1)).set_crs(epsg=28356).to_crs(epsg=4326)
 gdf = geopandas.GeoDataFrame(df)
 gdf["geometry"] = geometry
 gdf.plot(ax=aus, c="r")
@@ -109,7 +119,7 @@ plt.savefig("all_trees", bbox_inches="tight")
 
 
 #%%
-gdf.species = [x if type(x) is str else "unknown" for x in gdf.species]
+gdf.species = [x if isinstance(x, str) else "unknown" for x in gdf.species]
 #%% that's a lot of trees!
 # What about just figs?
 figs = {
@@ -149,7 +159,7 @@ markers = [  # see https://matplotlib.org/api/markers_api.html
     "p","P","*","h","H","+","x","X","D","d","|","_"]
 # fmt: on
 
-b = list(mcolors.TABLEAU_COLORS.keys())
+tab = list(mcolors.TABLEAU_COLORS.keys())
 base = list(mcolors.BASE_COLORS.keys())
 tab.extend(base)
 colours = tab
@@ -170,7 +180,7 @@ else:
     plt.xlim((151.05, 151.3))
     plt.ylim((-33.95, -33.75))
 # print(plt.axis())
-for i, x in enumerate(tree_counts.iteritems()):
+for i, x in enumerate(tree_counts.items()):
     tree = x[0]
     count = x[1]
     temp_df = gdf[gdf.species == tree]

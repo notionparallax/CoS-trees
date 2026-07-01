@@ -10,6 +10,7 @@ from pandas.api.types import CategoricalDtype
 from random import shuffle
 from shapely.geometry import Point, LineString, Polygon
 from tree_common_to_latin_names_map import tree_common_names
+import geodatasets
 import geopandas
 import matplotlib as mpl
 import matplotlib.colors as mcolors
@@ -71,11 +72,9 @@ def make_pt(row):
 
 def load_ryde_data():
     gdf = geopandas.read_file(os.path.join("in", "ryde", "public-trees-2013.shp"))
-    geometry = gdf.geometry
-    geometry.crs = {"init": "epsg:28356", "no_defs": True}
-    geometry = geometry.to_crs(epsg=4326)
+    geometry = gdf.geometry.set_crs(epsg=28356).to_crs(epsg=4326)
     gdf["geometry"] = geometry
-    gdf["species"] = gdf.apply(lambda x: "unknown")
+    gdf["species"] = "unknown"
     # gdf.plot(column="Height", legend=True, markersize=2)
     return gdf
 
@@ -100,18 +99,37 @@ def load_RBG_data():
     gdf = geopandas.GeoDataFrame(
         df, geometry=[Point(xy) for xy in zip(df.ItemCoordLongDD, df.ItemCoordLatDD)]
     )
+    gdf = gdf.set_crs(epsg=4326)
+    return gdf
 
 
-world = geopandas.read_file(geopandas.datasets.get_path("naturalearth_lowres"))
+def load_cos_live_data():
+    """Load current City of Sydney tree data from the official ArcGIS open data portal.
+
+    Dataset: City of Sydney Trees (updated regularly from asset register)
+    Source: https://hub.arcgis.com/datasets/cityofsydney::trees
+    Includes: species, common_name, height, canopy width, status, age, DBH
+    Licence: Creative Commons (check current terms at source)
+
+    Returns a GeoDataFrame in EPSG:4326 with one row per tree.
+    """
+    url = "https://opendata.arcgis.com/datasets/cityofsydney::trees.geojson"
+    gdf = geopandas.read_file(url)
+    # The dataset already uses lat/long (EPSG:4326).
+    # Normalise the species column name to match the other data sources.
+    if "species" not in gdf.columns and "Species" in gdf.columns:
+        gdf = gdf.rename(columns={"Species": "species"})
+    gdf["data_source"] = "City of Sydney open data (ArcGIS)"
+    return gdf
+
+
+world = geopandas.read_file(geodatasets.get_path("naturalearth lowres"))
 aus = world[world.name == "Australia"].plot()
 
-geometry = geopandas.GeoSeries(df.apply(make_pt, axis=1))
-geometry.crs = {"init": "epsg:28356", "no_defs": True}
-geometry = geometry.to_crs(epsg=4326)
+geometry = geopandas.GeoSeries(df.apply(make_pt, axis=1)).set_crs(epsg=28356).to_crs(epsg=4326)
 gdf = geopandas.GeoDataFrame(df)
 gdf["geometry"] = geometry
-gdf = gdf.append(load_ryde_data())
-gdf = gdf.append(load_RBG_data())
+gdf = pd.concat([gdf, load_ryde_data(), load_RBG_data()], ignore_index=True)
 gdf.plot(ax=aus, c="r")
 
 #%% Let's work out where we are in the world.
@@ -144,7 +162,7 @@ plt.savefig("all_trees", bbox_inches="tight")
 
 
 #%%
-gdf.species = [x if type(x) is str else "unknown" for x in gdf.species]
+gdf.species = [x if isinstance(x, str) else "unknown" for x in gdf.species]
 #%% that's a lot of trees!
 # What about just figs?
 figs = {
@@ -205,7 +223,7 @@ else:
     plt.xlim((151.05, 151.3))
     plt.ylim((-33.95, -33.75))
 # print(plt.axis())
-for i, x in enumerate(tree_counts.iteritems()):
+for i, x in enumerate(tree_counts.items()):
     tree = x[0]
     count = x[1]
     temp_df = gdf[gdf.species == tree]
