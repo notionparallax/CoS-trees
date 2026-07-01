@@ -19,6 +19,7 @@ import matplotlib.lines as mlines
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import pandas as pd
+from adjustText import adjust_text
 from shapely.geometry import Point, box
 
 from tree_common_to_latin_names_map import tree_common_names
@@ -365,9 +366,9 @@ if height_col:
     height_gdf.plot(ax=ax, column=height_col, cmap="YlGn",
                     markersize=2, alpha=0.6, legend=True, vmin=0, zorder=2,
                     legend_kwds={"label": "Height (m)", "shrink": 0.6})
-    # Annotate the top 5 tallest trees
+    # Annotate the top 5 tallest trees; adjust_text avoids overlaps
     top5 = height_gdf.nlargest(5, height_col)
-    label_offsets = [(6, 6), (6, 24), (-65, 6), (-65, 24), (6, -18)]
+    _texts = []
     for rank, (_, row) in enumerate(top5.iterrows()):
         pt = row.geometry
         h = row[height_col]
@@ -376,11 +377,13 @@ if height_col:
         mk = "ro" if rank == 0 else "b^"
         ms = 4 if rank == 0 else 3
         ax.plot(pt.x, pt.y, mk, markersize=ms, zorder=6)
-        ox, oy = label_offsets[rank]
-        ax.annotate(f"#{rank + 1} {sp}\n{h:.0f} m",
-                    xy=(pt.x, pt.y), xytext=(ox, oy),
-                    textcoords="offset points", fontsize=6, color=colour,
-                    arrowprops=dict(arrowstyle="-", color=colour, lw=0.8))
+        _texts.append(
+            ax.text(pt.x, pt.y, f"#{rank + 1} {sp}\n{h:.0f} m",
+                    fontsize=6, color=colour, zorder=7)
+        )
+    adjust_text(_texts, ax=ax,
+                arrowprops=dict(arrowstyle="-", color="grey", lw=0.7),
+                expand=(1.4, 1.6), force_text=(0.3, 0.5))
     clean_ax(ax)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
