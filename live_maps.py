@@ -10,6 +10,8 @@ from random import seed, shuffle
 
 import requests
 
+import numpy as np
+
 import geodatasets
 import geopandas
 import matplotlib.colors as mcolors
@@ -345,28 +347,65 @@ if height_col:
     tallest_pt = tallest.geometry
     print(f"  Tallest tree: {tallest.get('species', '?')} at {tallest_h:.1f} m")
 
-    fig_h, ax = plt.subplots()
+    fig_h, (ax, ax_hist) = plt.subplots(
+        2, 1,
+        gridspec_kw={"height_ratios": [9, 1]},
+        figsize=plt.rcParams["figure.figsize"],
+    )
     syd.plot(ax=ax, color="ghostwhite", edgecolor="black")
-    # Blue halo dots behind any tree taller than 50 m
-    tall_gdf = height_gdf[height_gdf[height_col] > 50]
+    # Blue halo dots behind any tree taller than 30 m
+    tall_gdf = height_gdf[height_gdf[height_col] > 30]
     if len(tall_gdf):
-        tall_gdf.plot(ax=ax, color="steelblue", marker="o", markersize=4, alpha=0.9, zorder=2)
-    # Colour-mapped dots on top (capped at 95th percentile so outliers don't bleach the scale)
+        tall_gdf.plot(ax=ax, color="blue", marker="o", markersize=6, alpha=0.9, zorder=2)
+    # Colour-mapped dots on top (capped at 95th percentile so outliers don’t bleach the scale)
     vmax = height_gdf[height_col].quantile(0.95)
     height_gdf.plot(ax=ax, column=height_col, cmap="YlGn",
                     markersize=2, alpha=0.6, legend=True, vmin=0, vmax=vmax, zorder=3,
-                    legend_kwds={"label": f"Height (m, capped at {vmax:.0f} m / 95th pctile)", "shrink": 0.6})
-    # Highlight the tallest tree with a red dot and annotation
-    ax.plot(tallest_pt.x, tallest_pt.y, "ro", markersize=4, zorder=5)
-    ax.annotate(f"{tallest.get('species', 'tallest')}\n{tallest_h:.0f} m",
-                xy=(tallest_pt.x, tallest_pt.y), xytext=(6, 6),
-                textcoords="offset points", fontsize=6, color="darkred",
-                arrowprops=dict(arrowstyle="-", color="darkred", lw=0.8))
+                    legend_kwds={"label": f"Height (m, capped at {vmax:.0f} m / 95th pctile)", "shrink": 0.6})
+    # Annotate the top 5 tallest trees
+    top5 = height_gdf.nlargest(5, height_col)
+    label_offsets = [(6, 6), (6, 24), (-65, 6), (-65, 24), (6, -18)]
+    for rank, (_, row) in enumerate(top5.iterrows()):
+        pt = row.geometry
+        h = row[height_col]
+        sp = row.get("species", "?")
+        colour = "darkred" if rank == 0 else "navy"
+        mk = "ro" if rank == 0 else "b^"
+        ms = 4 if rank == 0 else 3
+        ax.plot(pt.x, pt.y, mk, markersize=ms, zorder=6)
+        ox, oy = label_offsets[rank]
+        ax.annotate(f"#{rank + 1} {sp}\n{h:.0f} m",
+                    xy=(pt.x, pt.y), xytext=(ox, oy),
+                    textcoords="offset points", fontsize=6, color=colour,
+                    arrowprops=dict(arrowstyle="-", color=colour, lw=0.8))
     clean_ax(ax)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
-    ax.set_title(f"Tree height — City of Sydney (live data) · tallest: {tallest_h:.0f} m")
-    plt.tight_layout()
+    ax.set_title(f"Tree height — City of Sydney (live data) · tallest recorded: {tallest_h:.0f} m")
+
+    # Histogram panel — 5 m bins, coloured to match the map
+    heights_arr = height_gdf[height_col].values
+    bin_edges = np.arange(0, heights_arr.max() + 5, 5)
+    counts, edges = np.histogram(heights_arr, bins=bin_edges)
+    cmap_fn = plt.cm.YlGn
+    bar_colours = []
+    for left in edges[:-1]:
+        if left >= 100:
+            bar_colours.append("red")
+        elif left >= 30:
+            bar_colours.append("steelblue")
+        else:
+            bar_colours.append(cmap_fn(min(left / vmax, 1.0)))
+    ax_hist.bar(edges[:-1], counts, width=5, align="edge",
+                color=bar_colours, linewidth=0)
+    ax_hist.set_xlim(edges[0], edges[-1])
+    ax_hist.set_xlabel("Height (m)", fontsize=7)
+    ax_hist.set_ylabel("Count", fontsize=7)
+    ax_hist.tick_params(labelsize=6)
+    for spine in ["top", "right"]:
+        ax_hist.spines[spine].set_visible(False)
+
+    plt.tight_layout(h_pad=0.8)
     plt.savefig("out/tree_height_live.png", dpi=150, bbox_inches="tight")
     plt.close()
     print("  saved out/tree_height_live.png")
