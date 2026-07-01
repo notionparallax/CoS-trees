@@ -323,8 +323,9 @@ title = (
 ax.set_title(title)
 plt.tight_layout()
 plt.savefig("out/all_tree_map_live.png", dpi=300, bbox_inches="tight")
+plt.savefig("out/all_tree_map_live.svg", bbox_inches="tight")
 plt.close()
-print("  saved out/all_tree_map_live.png")
+print("  saved out/all_tree_map_live.png + .svg")
 
 # ---------------------------------------------------------------------------
 # Map 5 — new: tree height (only possible with live data)
@@ -336,18 +337,29 @@ if height_col:
     height_gdf = gdf[gdf[height_col].notna()].copy()
     height_gdf[height_col] = pd.to_numeric(height_gdf[height_col], errors="coerce")
     height_gdf = height_gdf[height_gdf[height_col] > 0]
+    n_above_20 = (height_gdf[height_col] > 20).sum()
+    print(f"  Trees above 20 m: {n_above_20:,} of {len(height_gdf):,}")
+
+    tallest = height_gdf.loc[height_gdf[height_col].idxmax()]
+    tallest_h = tallest[height_col]
+    tallest_pt = tallest.geometry
+    print(f"  Tallest tree: {tallest.get('species', '?')} at {tallest_h:.1f} m")
 
     fig_h, ax = plt.subplots()
     syd.plot(ax=ax, color="ghostwhite", edgecolor="black")
-    # Cap the colour scale at the 95th percentile so outliers don't wash out the scale
-    vmax = height_gdf[height_col].quantile(0.95)
     height_gdf.plot(ax=ax, column=height_col, cmap="YlGn",
-                    markersize=2, alpha=0.6, legend=True, vmin=0, vmax=vmax,
-                    legend_kwds={"label": f"Height (m, capped at {vmax:.0f}m / 95th pctile)", "shrink": 0.6})
+                    markersize=2, alpha=0.6, legend=True, vmin=0,
+                    legend_kwds={"label": "Height (m)", "shrink": 0.6})
+    # Highlight the tallest tree with a red dot and annotation
+    ax.plot(tallest_pt.x, tallest_pt.y, "ro", markersize=8, zorder=5)
+    ax.annotate(f"{tallest.get('species', 'tallest')}\n{tallest_h:.0f} m",
+                xy=(tallest_pt.x, tallest_pt.y), xytext=(6, 6),
+                textcoords="offset points", fontsize=6, color="darkred",
+                arrowprops=dict(arrowstyle="-", color="darkred", lw=0.8))
     clean_ax(ax)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
-    ax.set_title("Tree height — City of Sydney (live data)")
+    ax.set_title(f"Tree height — City of Sydney (live data) · tallest: {tallest_h:.0f} m")
     plt.tight_layout()
     plt.savefig("out/tree_height_live.png", dpi=150, bbox_inches="tight")
     plt.close()
