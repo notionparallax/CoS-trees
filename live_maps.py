@@ -315,7 +315,7 @@ for i, (tree, count) in enumerate(tree_counts.items()):
 
 ax.legend(handles=legend_handles, loc="upper left",
           bbox_to_anchor=(1.02, 1.0), borderaxespad=0,
-          prop={"size": 5}, labelspacing=0)
+          prop={"size": 5}, labelspacing=0.5)
 title = (
     f"{len(combined_near):,} Trees — City of Sydney, Royal Botanic Garden, "
     f"Centennial Parklands, City of Ryde (partial), University of Sydney"
