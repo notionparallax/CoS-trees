@@ -20,6 +20,15 @@ from tree_common_to_latin_names_map import tree_common_names
 
 os.makedirs("out", exist_ok=True)
 
+
+def clean_ax(ax):
+    """Remove spines, ticks and tick labels from a map axes."""
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+
 cm_to_inch = 2.54
 plt.rcParams["figure.figsize"] = [39 / cm_to_inch, 49 / cm_to_inch]
 
@@ -69,18 +78,100 @@ print(f"CRS after normalisation: {gdf.crs}")
 gdf["source"] = "City of Sydney (live)"
 
 # ---------------------------------------------------------------------------
-# Base geography — suburb outlines clipped to tree extent
+# Load supplementary data: Ryde (2013) and RBG / Centennial Parklands
 # ---------------------------------------------------------------------------
 
-# Compute tight bounds from the actual tree data with a small padding
-PAD = 0.005  # ~500 m
-minx, miny, maxx, maxy = gdf.total_bounds
-xlim = (minx - PAD, maxx + PAD)
-ylim = (miny - PAD, maxy + PAD)
+print("\nLoading Ryde tree data (2013)…")
+ryde_gdf = geopandas.read_file(os.path.join("in", "ryde", "public-trees-2013.shp"))
+ryde_gdf = ryde_gdf.set_crs(epsg=28356).to_crs(epsg=4326)
+ryde_gdf["species"] = "unknown"
+ryde_gdf["source"] = "City of Ryde (2013)"
+print(f"  {len(ryde_gdf):,} trees")
+
+print("Loading RBG / Centennial Parklands tree data…")
+rbg_frames = []
+for file_name, short_name in [
+    ("BGCP-AustralianBotanicGardens-MtAnnanTreeList.xlsx", "Mt Annan"),
+    ("BGCP-BlueMountainsBotanicGardens-TomahTreeList.xlsx", "Mt Tomah"),
+    ("BGCP-CentennialParklandsTreeList.xlsx",               "Centennial Parklands"),
+    ("BGCP-RoyalBotanicGarden-SydneyTreeList.xlsx",         "Royal Botanic Garden"),
+]:
+    path = os.path.join("in", "RBG", file_name)
+    df = pd.read_excel(path, skiprows=3)
+    df = df[df["ItemCoordLongDD"].notna() & df["ItemCoordLatDD"].notna()]
+    df["species"] = df["GenusSpecies"]
+    df["source"] = short_name
+    rbg_frames.append(df)
+rbg_df = pd.concat(rbg_frames, ignore_index=True)
+rbg_gdf = geopandas.GeoDataFrame(
+    rbg_df,
+    geometry=[Point(xy) for xy in zip(rbg_df["ItemCoordLongDD"], rbg_df["ItemCoordLatDD"])],
+    crs="EPSG:4326",
+)
+print(f"  {len(rbg_gdf):,} trees ({', '.join(rbg_df['source'].unique())})")
+
+# ---------------------------------------------------------------------------
+# Filter to within 10 km of Sydney CBD; build combined GDF
+# ---------------------------------------------------------------------------
+
+CBD_LON, CBD_LAT = 151.207, -33.869
+cbd_proj = (
+    geopandas.GeoDataFrame(geometry=[Point(CBD_LON, CBD_LAT)], crs="EPSG:4326")
+    .to_crs(epsg=28356)
+    .geometry.iloc[0]
+)
+RADIUS_M = 10_000
+
+def within_10km(df):
+    return df[df.to_crs(epsg=28356).geometry.distance(cbd_proj) <= RADIUS_M]
+
+ryde_near = within_10km(ryde_gdf)
+rbg_near  = within_10km(rbg_gdf)
+
+print(f"\nWithin {RADIUS_M/1000:.0f} km of CBD:")
+print(f"  CoS (live):  {len(gdf):,}")
+print(f"  Ryde:        {len(ryde_near):,} of {len(ryde_gdf):,}")
+for src in rbg_gdf["source"].unique():
+    n_near = len(rbg_near[rbg_near["source"] == src])
+    n_total = len(rbg_gdf[rbg_gdf["source"] == src])
+    print(f"  {src}: {n_near:,} of {n_total:,}")
+
+# Combined GDF for the primary species map (species column preserved)
+combined_near = pd.concat([
+    gdf[["geometry", "source", "species"]],
+    ryde_near[["geometry", "source", "species"]],
+    rbg_near[["geometry", "source", "species"]],
+], ignore_index=True)
+combined_near = geopandas.GeoDataFrame(combined_near, crs="EPSG:4326")
+combined_near["species"] = [
+    x if isinstance(x, str) else "unknown" for x in combined_near["species"]
+]
+
+# ---------------------------------------------------------------------------
+# Map bounds and base geography
+# ---------------------------------------------------------------------------
+
+PAD = 0.005        # ~500 m edge padding
+LEGEND_PAD = 0.04  # ~3.5 km extra east clearance so the species legend clears data
+
+# CoS-tight bounds (maps 1, 3, 5, 6)
+cos_minx, cos_miny, cos_maxx, cos_maxy = gdf.total_bounds
+xlim = (cos_minx - PAD, cos_maxx + PAD)
+ylim = (cos_miny - PAD, cos_maxy + PAD)
+
+# Combined-data bounds for the primary species map (map 4)
+all_minx, all_miny, all_maxx, all_maxy = combined_near.total_bounds
+species_xlim = (all_minx - PAD, all_maxx + PAD + LEGEND_PAD)
+species_ylim = (all_miny - PAD, all_maxy + PAD)
 
 aus_poas = geopandas.read_file("geopandas-blog/aus_poas.shp")
+# Suburb outlines for the CoS-tight crop
 bbox_geom = box(xlim[0], ylim[0], xlim[1], ylim[1])
 syd = aus_poas[aus_poas.intersects(bbox_geom)]
+# Suburb outlines for the combined species map
+syd_species = aus_poas[aus_poas.intersects(
+    box(species_xlim[0], species_ylim[0], species_xlim[1], species_ylim[1])
+)]
 
 # ---------------------------------------------------------------------------
 # Map 1 — all trees
@@ -90,6 +181,7 @@ print("\nRendering map: all trees…")
 fig, ax = plt.subplots()
 syd.plot(ax=ax, color="ghostwhite", edgecolor="black")
 gdf.plot(ax=ax, color="darkgreen", marker=".", markersize=1, alpha=0.15)
+clean_ax(ax)
 ax.set_xlim(*xlim)
 ax.set_ylim(*ylim)
 ax.set_title(f"All trees in the City of Sydney — live open data ({len(gdf):,} trees)")
@@ -141,6 +233,7 @@ ax.legend(
     handles=[mpatches.Patch(color=figs[f]["colour"], label=f) for f in figs],
     loc="upper left", fontsize=7,
 )
+clean_ax(ax)
 ax.set_xlim(*xlim)
 ax.set_ylim(*ylim)
 ax.set_title("Figs in the City of Sydney — live open data")
@@ -150,10 +243,10 @@ plt.close()
 print("  saved out/figs_live.png")
 
 # ---------------------------------------------------------------------------
-# Map 4 — all species by colour/marker (equiv. to the original all_tree_map)
+# Map 4 — PRIMARY: all species, all sources, unique colour+marker per species
 # ---------------------------------------------------------------------------
 
-print("Rendering map: all species…")
+print("Rendering PRIMARY MAP: all species (CoS + RBG + Centennial + Ryde)…")
 markers = [".", "o", "v", "^", "<", ">", "1", "2", "3", "4",
            "8", "s", "p", "P", "*", "h", "H", "+", "x", "X", "D", "d", "|", "_"]
 tab = list(mcolors.TABLEAU_COLORS.keys())
@@ -164,24 +257,25 @@ idents = [{"m": m, "c": c} for m in markers for c in colours]
 seed(42)
 shuffle(idents)
 
-tree_counts = gdf["species"].value_counts()
+tree_counts = combined_near["species"].value_counts()
 
 fig_all, ax = plt.subplots()
-syd.plot(ax=ax, color="ghostwhite", edgecolor="white")
-ax.set_xlim(*xlim)
-ax.set_ylim(*ylim)
+syd_species.plot(ax=ax, color="ghostwhite", edgecolor="#cccccc", linewidth=0.5)
+clean_ax(ax)
+ax.set_xlim(*species_xlim)
+ax.set_ylim(*species_ylim)
 
 legend_handles = []
 for i, (tree, count) in enumerate(tree_counts.items()):
     ident = idents[i % len(idents)]
-    sub = gdf[gdf["species"] == tree]
+    sub = combined_near[combined_near["species"] == tree]
     try:
         common = "—" + tree_common_names[tree][0].title()
     except (KeyError, IndexError):
         common = ""
     label = rf"$\it{{{tree}}}${common} ({count})" if count >= 50 else None
     sub.plot(ax=ax, color=ident["c"], marker=ident["m"],
-             alpha=0.4, markersize=3, label=label)
+             alpha=0.4, markersize=3)
     if label:
         legend_handles.append(
             mpatches.Patch(color=ident["c"],
@@ -190,8 +284,10 @@ for i, (tree, count) in enumerate(tree_counts.items()):
 
 ax.legend(handles=legend_handles, loc="upper right",
           markerscale=2, prop={"size": 5}, labelspacing=0)
-ax.tick_params(labelsize=6)
-title = f"{len(gdf):,} Trees in the City of Sydney (live data)"
+title = (
+    f"{len(combined_near):,} Trees — City of Sydney, Royal Botanic Garden, "
+    f"Centennial Parklands, City of Ryde (partial)"
+)
 ax.set_title(title)
 plt.tight_layout()
 plt.savefig("out/all_tree_map_live.png", dpi=300, bbox_inches="tight")
@@ -216,6 +312,7 @@ if height_col:
     height_gdf.plot(ax=ax, column=height_col, cmap="YlGn",
                     markersize=2, alpha=0.6, legend=True, vmin=0, vmax=vmax,
                     legend_kwds={"label": f"Height (m, capped at {vmax:.0f}m / 95th pctile)", "shrink": 0.6})
+    clean_ax(ax)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
     ax.set_title("Tree height — City of Sydney (live data)")
@@ -225,65 +322,6 @@ if height_col:
     print("  saved out/tree_height_live.png")
 else:
     print("  (no height column found — skipping height map)")
-
-# ---------------------------------------------------------------------------
-# Load supplementary data: Ryde (2013) and RBG / Centennial Parklands
-# ---------------------------------------------------------------------------
-
-print("\nLoading Ryde tree data (2013)…")
-ryde_gdf = geopandas.read_file(os.path.join("in", "ryde", "public-trees-2013.shp"))
-ryde_gdf = ryde_gdf.set_crs(epsg=28356).to_crs(epsg=4326)
-ryde_gdf["species"] = "unknown"
-ryde_gdf["source"] = "City of Ryde (2013)"
-print(f"  {len(ryde_gdf):,} trees")
-
-print("Loading RBG / Centennial Parklands tree data…")
-rbg_frames = []
-for file_name, short_name in [
-    ("BGCP-AustralianBotanicGardens-MtAnnanTreeList.xlsx", "Mt Annan"),
-    ("BGCP-BlueMountainsBotanicGardens-TomahTreeList.xlsx", "Mt Tomah"),
-    ("BGCP-CentennialParklandsTreeList.xlsx",               "Centennial Parklands"),
-    ("BGCP-RoyalBotanicGarden-SydneyTreeList.xlsx",         "Royal Botanic Garden"),
-]:
-    path = os.path.join("in", "RBG", file_name)
-    df = pd.read_excel(path, skiprows=3)
-    df = df[df["ItemCoordLongDD"].notna() & df["ItemCoordLatDD"].notna()]
-    df["species"] = df["GenusSpecies"]
-    df["source"] = short_name
-    rbg_frames.append(df)
-rbg_df = pd.concat(rbg_frames, ignore_index=True)
-rbg_gdf = geopandas.GeoDataFrame(
-    rbg_df,
-    geometry=[Point(xy) for xy in zip(rbg_df["ItemCoordLongDD"], rbg_df["ItemCoordLatDD"])],
-    crs="EPSG:4326",
-)
-print(f"  {len(rbg_gdf):,} trees ({', '.join(rbg_df['source'].unique())})")
-
-# ---------------------------------------------------------------------------
-# Filter supplementary data to within 10 km of Sydney CBD
-# ---------------------------------------------------------------------------
-
-CBD_LON, CBD_LAT = 151.207, -33.869  # George St / Martin Place
-cbd_proj = (
-    geopandas.GeoDataFrame(geometry=[Point(CBD_LON, CBD_LAT)], crs="EPSG:4326")
-    .to_crs(epsg=28356)
-    .geometry.iloc[0]
-)
-RADIUS_M = 10_000
-
-def within_10km(df):
-    return df[df.to_crs(epsg=28356).geometry.distance(cbd_proj) <= RADIUS_M]
-
-ryde_near = within_10km(ryde_gdf)
-rbg_near  = within_10km(rbg_gdf)
-
-print(f"\nWithin {RADIUS_M/1000:.0f} km of CBD:")
-print(f"  CoS (live):  {len(gdf):,}")
-print(f"  Ryde:        {len(ryde_near):,} of {len(ryde_gdf):,}")
-for src in rbg_gdf["source"].unique():
-    n_near = len(rbg_near[rbg_near["source"] == src])
-    n_total = len(rbg_gdf[rbg_gdf["source"] == src])
-    print(f"  {src}: {n_near:,} of {n_total:,}")
 
 # ---------------------------------------------------------------------------
 # Map 6 — tight CoS view showing where supplementary data sits relative to CoS
@@ -319,6 +357,7 @@ for src, style in source_styles.items():
              markersize=style["ms"], alpha=style["alpha"], zorder=style["z"])
     legend_handles.append(mpatches.Patch(color=style["color"], label=f"{src} ({len(sub):,})"))
 ax.legend(handles=legend_handles, loc="lower right", fontsize=7)
+clean_ax(ax)
 ax.set_xlim(*xlim)
 ax.set_ylim(*ylim)
 ax.set_title(f"Trees near Sydney CBD — CoS view ({len(combined_tight):,} within crop)")
@@ -364,6 +403,7 @@ for src, style in source_styles.items():
              markersize=style["ms"], alpha=style["alpha"], zorder=style["z"])
     legend_handles.append(mpatches.Patch(color=style["color"], label=f"{src} ({len(sub):,})"))
 ax.legend(handles=legend_handles, loc="lower right", fontsize=7)
+clean_ax(ax)
 ax.set_xlim(*wide_xlim)
 ax.set_ylim(*wide_ylim)
 ax.set_title(f"Trees within 10 km of Sydney CBD — {len(combined_wide):,} total")
