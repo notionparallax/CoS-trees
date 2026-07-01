@@ -339,12 +339,20 @@ if height_col:
     height_gdf = gdf[gdf[height_col].notna()].copy()
     height_gdf[height_col] = pd.to_numeric(height_gdf[height_col], errors="coerce")
     height_gdf = height_gdf[height_gdf[height_col] > 0]
+    # Drop obvious data errors: no city tree exceeds 80 m
+    outliers = height_gdf[height_gdf[height_col] > 80]
+    if len(outliers):
+        desc = ', '.join(
+            f"{r.get('species', '?')} ({r[height_col]:.0f} m)"
+            for _, r in outliers.iterrows()
+        )
+        print(f'  Dropping {len(outliers)} outlier(s) >80 m: {desc}')
+    height_gdf = height_gdf[height_gdf[height_col] <= 80]
     n_above_20 = (height_gdf[height_col] > 20).sum()
     print(f"  Trees above 20 m: {n_above_20:,} of {len(height_gdf):,}")
 
     tallest = height_gdf.loc[height_gdf[height_col].idxmax()]
     tallest_h = tallest[height_col]
-    tallest_pt = tallest.geometry
     print(f"  Tallest tree: {tallest.get('species', '?')} at {tallest_h:.1f} m")
 
     fig_h, (ax, ax_hist) = plt.subplots(
@@ -353,15 +361,10 @@ if height_col:
         figsize=plt.rcParams["figure.figsize"],
     )
     syd.plot(ax=ax, color="ghostwhite", edgecolor="black")
-    # Blue halo dots behind any tree taller than 30 m
-    tall_gdf = height_gdf[height_gdf[height_col] > 30]
-    if len(tall_gdf):
-        tall_gdf.plot(ax=ax, color="blue", marker="o", markersize=6, alpha=0.9, zorder=2)
-    # Colour-mapped dots on top (capped at 95th percentile so outliers don’t bleach the scale)
-    vmax = height_gdf[height_col].quantile(0.95)
+    # Full colour range - no clipping needed now the outlier is removed
     height_gdf.plot(ax=ax, column=height_col, cmap="YlGn",
-                    markersize=2, alpha=0.6, legend=True, vmin=0, vmax=vmax, zorder=3,
-                    legend_kwds={"label": f"Height (m, capped at {vmax:.0f} m / 95th pctile)", "shrink": 0.6})
+                    markersize=2, alpha=0.6, legend=True, vmin=0, zorder=2,
+                    legend_kwds={"label": "Height (m)", "shrink": 0.6})
     # Annotate the top 5 tallest trees
     top5 = height_gdf.nlargest(5, height_col)
     label_offsets = [(6, 6), (6, 24), (-65, 6), (-65, 24), (6, -18)]
@@ -381,21 +384,15 @@ if height_col:
     clean_ax(ax)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
-    ax.set_title(f"Tree height — City of Sydney (live data) · tallest recorded: {tallest_h:.0f} m")
+    ax.set_title(f"Tree height — City of Sydney (live data) · tallest: {tallest_h:.0f} m")
 
     # Histogram panel — 5 m bins, coloured to match the map
     heights_arr = height_gdf[height_col].values
     bin_edges = np.arange(0, heights_arr.max() + 5, 5)
     counts, edges = np.histogram(heights_arr, bins=bin_edges)
+    vmax_hist = heights_arr.max()
     cmap_fn = plt.cm.YlGn
-    bar_colours = []
-    for left in edges[:-1]:
-        if left >= 100:
-            bar_colours.append("red")
-        elif left >= 30:
-            bar_colours.append("steelblue")
-        else:
-            bar_colours.append(cmap_fn(min(left / vmax, 1.0)))
+    bar_colours = [cmap_fn(min(left / vmax_hist, 1.0)) for left in edges[:-1]]
     ax_hist.bar(edges[:-1], counts, width=5, align="edge",
                 color=bar_colours, linewidth=0)
     ax_hist.set_xlim(edges[0], edges[-1])
