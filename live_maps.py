@@ -313,12 +313,12 @@ for i, (tree, count) in enumerate(tree_counts.items()):
                           label=rf"$\it{{{tree}}}${common} ({count})")
         )
 
-ax.legend(handles=legend_handles, loc="upper left",
+ax.legend(handles=sorted(legend_handles, key=lambda h: h.get_label()), loc="upper left",
           bbox_to_anchor=(1.02, 1.0), borderaxespad=0,
           prop={"size": 5}, labelspacing=0.5)
 title = (
     f"{len(combined_near):,} Trees — City of Sydney, Royal Botanic Garden, "
-    f"Centennial Parklands, City of Ryde (partial), University of Sydney"
+    f"Centennial Parklands, University of Sydney"
 )
 ax.set_title(title)
 plt.tight_layout()
@@ -347,11 +347,17 @@ if height_col:
 
     fig_h, ax = plt.subplots()
     syd.plot(ax=ax, color="ghostwhite", edgecolor="black")
+    # Blue halo dots behind any tree taller than 50 m
+    tall_gdf = height_gdf[height_gdf[height_col] > 50]
+    if len(tall_gdf):
+        tall_gdf.plot(ax=ax, color="steelblue", marker="o", markersize=4, alpha=0.9, zorder=2)
+    # Colour-mapped dots on top (capped at 95th percentile so outliers don't bleach the scale)
+    vmax = height_gdf[height_col].quantile(0.95)
     height_gdf.plot(ax=ax, column=height_col, cmap="YlGn",
-                    markersize=2, alpha=0.6, legend=True, vmin=0,
-                    legend_kwds={"label": "Height (m)", "shrink": 0.6})
+                    markersize=2, alpha=0.6, legend=True, vmin=0, vmax=vmax, zorder=3,
+                    legend_kwds={"label": f"Height (m, capped at {vmax:.0f} m / 95th pctile)", "shrink": 0.6})
     # Highlight the tallest tree with a red dot and annotation
-    ax.plot(tallest_pt.x, tallest_pt.y, "ro", markersize=8, zorder=5)
+    ax.plot(tallest_pt.x, tallest_pt.y, "ro", markersize=4, zorder=5)
     ax.annotate(f"{tallest.get('species', 'tallest')}\n{tallest_h:.0f} m",
                 xy=(tallest_pt.x, tallest_pt.y), xytext=(6, 6),
                 textcoords="offset points", fontsize=6, color="darkred",
