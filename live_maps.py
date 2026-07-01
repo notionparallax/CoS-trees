@@ -66,6 +66,7 @@ elif gdf.crs is not None and gdf.crs.to_epsg() != 4326:
     gdf = gdf.to_crs(epsg=4326)
 
 print(f"CRS after normalisation: {gdf.crs}")
+gdf["source"] = "City of Sydney (live)"
 
 # ---------------------------------------------------------------------------
 # Base geography — suburb outlines clipped to tree extent
@@ -224,6 +225,152 @@ if height_col:
     print("  saved out/tree_height_live.png")
 else:
     print("  (no height column found — skipping height map)")
+
+# ---------------------------------------------------------------------------
+# Load supplementary data: Ryde (2013) and RBG / Centennial Parklands
+# ---------------------------------------------------------------------------
+
+print("\nLoading Ryde tree data (2013)…")
+ryde_gdf = geopandas.read_file(os.path.join("in", "ryde", "public-trees-2013.shp"))
+ryde_gdf = ryde_gdf.set_crs(epsg=28356).to_crs(epsg=4326)
+ryde_gdf["species"] = "unknown"
+ryde_gdf["source"] = "City of Ryde (2013)"
+print(f"  {len(ryde_gdf):,} trees")
+
+print("Loading RBG / Centennial Parklands tree data…")
+rbg_frames = []
+for file_name, short_name in [
+    ("BGCP-AustralianBotanicGardens-MtAnnanTreeList.xlsx", "Mt Annan"),
+    ("BGCP-BlueMountainsBotanicGardens-TomahTreeList.xlsx", "Mt Tomah"),
+    ("BGCP-CentennialParklandsTreeList.xlsx",               "Centennial Parklands"),
+    ("BGCP-RoyalBotanicGarden-SydneyTreeList.xlsx",         "Royal Botanic Garden"),
+]:
+    path = os.path.join("in", "RBG", file_name)
+    df = pd.read_excel(path, skiprows=3)
+    df = df[df["ItemCoordLongDD"].notna() & df["ItemCoordLatDD"].notna()]
+    df["species"] = df["GenusSpecies"]
+    df["source"] = short_name
+    rbg_frames.append(df)
+rbg_df = pd.concat(rbg_frames, ignore_index=True)
+rbg_gdf = geopandas.GeoDataFrame(
+    rbg_df,
+    geometry=[Point(xy) for xy in zip(rbg_df["ItemCoordLongDD"], rbg_df["ItemCoordLatDD"])],
+    crs="EPSG:4326",
+)
+print(f"  {len(rbg_gdf):,} trees ({', '.join(rbg_df['source'].unique())})")
+
+# ---------------------------------------------------------------------------
+# Filter supplementary data to within 10 km of Sydney CBD
+# ---------------------------------------------------------------------------
+
+CBD_LON, CBD_LAT = 151.207, -33.869  # George St / Martin Place
+cbd_proj = (
+    geopandas.GeoDataFrame(geometry=[Point(CBD_LON, CBD_LAT)], crs="EPSG:4326")
+    .to_crs(epsg=28356)
+    .geometry.iloc[0]
+)
+RADIUS_M = 10_000
+
+def within_10km(df):
+    return df[df.to_crs(epsg=28356).geometry.distance(cbd_proj) <= RADIUS_M]
+
+ryde_near = within_10km(ryde_gdf)
+rbg_near  = within_10km(rbg_gdf)
+
+print(f"\nWithin {RADIUS_M/1000:.0f} km of CBD:")
+print(f"  CoS (live):  {len(gdf):,}")
+print(f"  Ryde:        {len(ryde_near):,} of {len(ryde_gdf):,}")
+for src in rbg_gdf["source"].unique():
+    n_near = len(rbg_near[rbg_near["source"] == src])
+    n_total = len(rbg_gdf[rbg_gdf["source"] == src])
+    print(f"  {src}: {n_near:,} of {n_total:,}")
+
+# ---------------------------------------------------------------------------
+# Map 6 — tight CoS view showing where supplementary data sits relative to CoS
+# ---------------------------------------------------------------------------
+
+print("\nRendering map: CoS + nearby RBG/Centennial (CoS-tight crop)…")
+
+# Combine to a slim GDF with just geometry + source
+combined_tight = pd.concat([
+    gdf[["geometry", "source"]],
+    ryde_near[["geometry", "source"]],
+    rbg_near[["geometry", "source"]],
+], ignore_index=True)
+combined_tight = geopandas.GeoDataFrame(combined_tight, crs="EPSG:4326")
+
+source_styles = {
+    "City of Sydney (live)": {"color": "darkgreen", "ms": 1,  "alpha": 0.2,  "z": 2},
+    "Centennial Parklands":  {"color": "C2",        "ms": 2,  "alpha": 0.55, "z": 3},
+    "Royal Botanic Garden":  {"color": "C0",        "ms": 3,  "alpha": 0.7,  "z": 4},
+    "City of Ryde (2013)":   {"color": "C1",        "ms": 1,  "alpha": 0.3,  "z": 2},
+    "Mt Annan":              {"color": "C4",        "ms": 3,  "alpha": 0.7,  "z": 3},
+    "Mt Tomah":              {"color": "C5",        "ms": 3,  "alpha": 0.7,  "z": 3},
+}
+
+fig_t, ax = plt.subplots()
+syd.plot(ax=ax, color="ghostwhite", edgecolor="black", linewidth=0.5)
+legend_handles = []
+for src, style in source_styles.items():
+    sub = combined_tight[combined_tight["source"] == src]
+    if not len(sub):
+        continue
+    sub.plot(ax=ax, color=style["color"], marker=".",
+             markersize=style["ms"], alpha=style["alpha"], zorder=style["z"])
+    legend_handles.append(mpatches.Patch(color=style["color"], label=f"{src} ({len(sub):,})"))
+ax.legend(handles=legend_handles, loc="lower right", fontsize=7)
+ax.set_xlim(*xlim)
+ax.set_ylim(*ylim)
+ax.set_title(f"Trees near Sydney CBD — CoS view ({len(combined_tight):,} within crop)")
+plt.tight_layout()
+plt.savefig("out/combined_cos_crop.png", dpi=150, bbox_inches="tight")
+plt.close()
+print("  saved out/combined_cos_crop.png")
+
+# ---------------------------------------------------------------------------
+# Map 7 — 10 km wide view, all sources
+# ---------------------------------------------------------------------------
+
+print("Rendering map: combined data — 10 km view…")
+
+combined_wide = pd.concat([
+    gdf[["geometry", "source"]],
+    ryde_gdf[["geometry", "source"]],   # all of Ryde, not just 10km slice
+    rbg_near[["geometry", "source"]],
+], ignore_index=True)
+combined_wide = geopandas.GeoDataFrame(combined_wide, crs="EPSG:4326")
+
+# Derive map extent from the 10 km projected buffer (not from data bounds,
+# so the circle is always centred on the CBD regardless of data coverage)
+cbd_buffer_4326 = (
+    geopandas.GeoDataFrame(geometry=[cbd_proj.buffer(RADIUS_M + 500)], crs="EPSG:28356")
+    .to_crs(epsg=4326)
+)
+bx0, by0, bx1, by1 = cbd_buffer_4326.total_bounds
+wide_xlim = (bx0, bx1)
+wide_ylim = (by0, by1)
+
+wide_bbox = box(wide_xlim[0], wide_ylim[0], wide_xlim[1], wide_ylim[1])
+syd_wide = aus_poas[aus_poas.intersects(wide_bbox)]
+
+fig_w, ax = plt.subplots()
+syd_wide.plot(ax=ax, color="ghostwhite", edgecolor="black", linewidth=0.5)
+legend_handles = []
+for src, style in source_styles.items():
+    sub = combined_wide[combined_wide["source"] == src]
+    if not len(sub):
+        continue
+    sub.plot(ax=ax, color=style["color"], marker=".",
+             markersize=style["ms"], alpha=style["alpha"], zorder=style["z"])
+    legend_handles.append(mpatches.Patch(color=style["color"], label=f"{src} ({len(sub):,})"))
+ax.legend(handles=legend_handles, loc="lower right", fontsize=7)
+ax.set_xlim(*wide_xlim)
+ax.set_ylim(*wide_ylim)
+ax.set_title(f"Trees within 10 km of Sydney CBD — {len(combined_wide):,} total")
+plt.tight_layout()
+plt.savefig("out/combined_10km.png", dpi=150, bbox_inches="tight")
+plt.close()
+print("  saved out/combined_10km.png")
 
 # ---------------------------------------------------------------------------
 # Done
