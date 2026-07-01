@@ -13,6 +13,7 @@ import requests
 import geodatasets
 import geopandas
 import matplotlib.colors as mcolors
+import matplotlib.lines as mlines
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -181,8 +182,7 @@ combined_near["species"] = [
 # Map bounds and base geography
 # ---------------------------------------------------------------------------
 
-PAD = 0.005        # ~500 m edge padding
-LEGEND_PAD = 0.04  # ~3.5 km extra east clearance so the species legend clears data
+PAD = 0.005  # ~500 m edge padding
 
 # CoS-tight bounds (maps 1, 3, 5, 6)
 cos_minx, cos_miny, cos_maxx, cos_maxy = gdf.total_bounds
@@ -191,7 +191,7 @@ ylim = (cos_miny - PAD, cos_maxy + PAD)
 
 # Combined-data bounds for the primary species map (map 4)
 all_minx, all_miny, all_maxx, all_maxy = combined_near.total_bounds
-species_xlim = (all_minx - PAD, all_maxx + PAD + LEGEND_PAD)
+species_xlim = (all_minx - PAD, all_maxx + PAD)
 species_ylim = (all_miny - PAD, all_maxy + PAD)
 
 aus_poas = geopandas.read_file("geopandas-blog/aus_poas.shp")
@@ -308,12 +308,14 @@ for i, (tree, count) in enumerate(tree_counts.items()):
              alpha=0.4, markersize=3)
     if label:
         legend_handles.append(
-            mpatches.Patch(color=ident["c"],
-                           label=rf"$\it{{{tree}}}${common} ({count})")
+            mlines.Line2D([], [], color=ident["c"], marker=ident["m"],
+                          linestyle="None", markersize=5,
+                          label=rf"$\it{{{tree}}}${common} ({count})")
         )
 
-ax.legend(handles=legend_handles, loc="upper right",
-          markerscale=2, prop={"size": 5}, labelspacing=0)
+ax.legend(handles=legend_handles, loc="upper left",
+          bbox_to_anchor=(1.02, 1.0), borderaxespad=0,
+          prop={"size": 5}, labelspacing=0)
 title = (
     f"{len(combined_near):,} Trees — City of Sydney, Royal Botanic Garden, "
     f"Centennial Parklands, City of Ryde (partial), University of Sydney"
