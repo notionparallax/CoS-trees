@@ -1,0 +1,15 @@
+# Core spatial stack
+geopandas>=1.0
+geodatasets>=2023.3     # replaces the removed geopandas.datasets module
+pyproj>=3.0             # set_crs() API; dict-style CRS removed
+shapely>=2.0
+
+# Data / numerics
+pandas>=2.0             # DataFrame.append() and .iteritems() removed
+openpyxl                # pandas Excel support
+
+# Plotting
+matplotlib>=3.5
+
+# HTTP (used in tree_names.py)
+requests
