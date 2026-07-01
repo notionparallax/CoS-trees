@@ -263,13 +263,17 @@ for species, style in figs.items():
         sub.plot(ax=ax, color=style["colour"], marker=style["marker"],
                  alpha=style["alpha"], markersize=4)
 ax.legend(
-    handles=[mpatches.Patch(color=figs[f]["colour"], label=f) for f in figs],
+    handles=[
+        mpatches.Patch(color=figs[f]["colour"],
+                       label=f"{f} ({len(fig_gdf[fig_gdf['species'] == f]):,})")
+        for f in figs if len(fig_gdf[fig_gdf["species"] == f])
+    ],
     loc="upper left", fontsize=7,
 )
 clean_ax(ax)
 ax.set_xlim(*xlim)
 ax.set_ylim(*ylim)
-ax.set_title("Figs in the City of Sydney — live open data")
+ax.set_title(f"Figs in the City of Sydney ({len(fig_gdf):,} total)")
 plt.tight_layout()
 plt.savefig("out/figs_live.png", dpi=150, bbox_inches="tight")
 plt.close()
