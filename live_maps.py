@@ -14,7 +14,7 @@ import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import pandas as pd
-from shapely.geometry import Point
+from shapely.geometry import Point, box
 
 from tree_common_to_latin_names_map import tree_common_names
 
@@ -68,15 +68,18 @@ elif gdf.crs is not None and gdf.crs.to_epsg() != 4326:
 print(f"CRS after normalisation: {gdf.crs}")
 
 # ---------------------------------------------------------------------------
-# Base geography — suburb outlines
+# Base geography — suburb outlines clipped to tree extent
 # ---------------------------------------------------------------------------
 
-aus_poas = geopandas.read_file("geopandas-blog/aus_poas.shp")
-syd2000 = aus_poas.query("code == 2000")
-middle = syd2000.centroid.iloc[0]
+# Compute tight bounds from the actual tree data with a small padding
+PAD = 0.005  # ~500 m
+minx, miny, maxx, maxy = gdf.total_bounds
+xlim = (minx - PAD, maxx + PAD)
+ylim = (miny - PAD, maxy + PAD)
 
-aus_poas["dist"] = aus_poas.geometry.distance(middle)
-syd = aus_poas[aus_poas.dist < 0.18]
+aus_poas = geopandas.read_file("geopandas-blog/aus_poas.shp")
+bbox_geom = box(xlim[0], ylim[0], xlim[1], ylim[1])
+syd = aus_poas[aus_poas.intersects(bbox_geom)]
 
 # ---------------------------------------------------------------------------
 # Map 1 — all trees
@@ -86,8 +89,8 @@ print("\nRendering map: all trees…")
 fig, ax = plt.subplots()
 syd.plot(ax=ax, color="ghostwhite", edgecolor="black")
 gdf.plot(ax=ax, color="darkgreen", marker=".", markersize=1, alpha=0.15)
-ax.set_xlim(151.05, 151.30)
-ax.set_ylim(-33.95, -33.75)
+ax.set_xlim(*xlim)
+ax.set_ylim(*ylim)
 ax.set_title(f"All trees in the City of Sydney — live open data ({len(gdf):,} trees)")
 plt.tight_layout()
 plt.savefig("out/all_trees_live.png", dpi=150, bbox_inches="tight")
@@ -137,8 +140,8 @@ ax.legend(
     handles=[mpatches.Patch(color=figs[f]["colour"], label=f) for f in figs],
     loc="upper left", fontsize=7,
 )
-ax.set_xlim(151.05, 151.30)
-ax.set_ylim(-33.95, -33.75)
+ax.set_xlim(*xlim)
+ax.set_ylim(*ylim)
 ax.set_title("Figs in the City of Sydney — live open data")
 plt.tight_layout()
 plt.savefig("out/figs_live.png", dpi=150, bbox_inches="tight")
@@ -164,8 +167,8 @@ tree_counts = gdf["species"].value_counts()
 
 fig_all, ax = plt.subplots()
 syd.plot(ax=ax, color="ghostwhite", edgecolor="white")
-ax.set_xlim(151.05, 151.30)
-ax.set_ylim(-33.95, -33.75)
+ax.set_xlim(*xlim)
+ax.set_ylim(*ylim)
 
 legend_handles = []
 for i, (tree, count) in enumerate(tree_counts.items()):
@@ -212,8 +215,8 @@ if height_col:
     height_gdf.plot(ax=ax, column=height_col, cmap="YlGn",
                     markersize=2, alpha=0.6, legend=True, vmin=0, vmax=vmax,
                     legend_kwds={"label": f"Height (m, capped at {vmax:.0f}m / 95th pctile)", "shrink": 0.6})
-    ax.set_xlim(151.05, 151.30)
-    ax.set_ylim(-33.95, -33.75)
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
     ax.set_title("Tree height — City of Sydney (live data)")
     plt.tight_layout()
     plt.savefig("out/tree_height_live.png", dpi=150, bbox_inches="tight")
