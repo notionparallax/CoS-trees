@@ -8,6 +8,8 @@ Outputs:   out/ directory — PNG maps using current data
 import os
 from random import seed, shuffle
 
+import requests
+
 import geodatasets
 import geopandas
 import matplotlib.colors as mcolors
@@ -110,6 +112,27 @@ rbg_gdf = geopandas.GeoDataFrame(
 )
 print(f"  {len(rbg_gdf):,} trees ({', '.join(rbg_df['source'].unique())})")
 
+print("Loading USYD CampusFlora data…")
+_usyd_resp = requests.get("https://campusflora.sydney.edu.au/species.json", timeout=30)
+_usyd_resp.raise_for_status()
+_usyd_rows = []
+for _sp in _usyd_resp.json():
+    for _loc in _sp.get("species_locations", []):
+        if not _loc.get("removed", True):
+            _usyd_rows.append({
+                "species": _sp["genus_species"],
+                "longitude": float(_loc["longitude"]),
+                "latitude": float(_loc["latitude"]),
+                "source": "University of Sydney",
+            })
+_usyd_df = pd.DataFrame(_usyd_rows)
+usyd_gdf = geopandas.GeoDataFrame(
+    _usyd_df,
+    geometry=geopandas.points_from_xy(_usyd_df["longitude"], _usyd_df["latitude"]),
+    crs="EPSG:4326",
+)
+print(f"  {len(usyd_gdf):,} plant locations ({_usyd_df['species'].nunique()} species)")
+
 # ---------------------------------------------------------------------------
 # Filter to within 10 km of Sydney CBD; build combined GDF
 # ---------------------------------------------------------------------------
@@ -120,27 +143,34 @@ cbd_proj = (
     .to_crs(epsg=28356)
     .geometry.iloc[0]
 )
-RADIUS_M = 10_000
+RADIUS_TIGHT = 4_000   # 4 km  — covers CoS, RBG, Centennial; excludes Ryde
+RADIUS_WIDE  = 20_000  # 20 km — covers all of Ryde and beyond
 
-def within_10km(df):
-    return df[df.to_crs(epsg=28356).geometry.distance(cbd_proj) <= RADIUS_M]
+def within_radius(df, radius):
+    return df[df.to_crs(epsg=28356).geometry.distance(cbd_proj) <= radius]
 
-ryde_near = within_10km(ryde_gdf)
-rbg_near  = within_10km(rbg_gdf)
+ryde_near = within_radius(ryde_gdf, RADIUS_TIGHT)
+rbg_near  = within_radius(rbg_gdf,  RADIUS_TIGHT)
+usyd_near = within_radius(usyd_gdf, RADIUS_TIGHT)
+ryde_wide = within_radius(ryde_gdf, RADIUS_WIDE)
 
-print(f"\nWithin {RADIUS_M/1000:.0f} km of CBD:")
+print(f"\nWithin {RADIUS_TIGHT/1000:.0f} km of CBD (tight):")
 print(f"  CoS (live):  {len(gdf):,}")
 print(f"  Ryde:        {len(ryde_near):,} of {len(ryde_gdf):,}")
 for src in rbg_gdf["source"].unique():
     n_near = len(rbg_near[rbg_near["source"] == src])
     n_total = len(rbg_gdf[rbg_gdf["source"] == src])
     print(f"  {src}: {n_near:,} of {n_total:,}")
+print(f"  USYD:        {len(usyd_near):,} of {len(usyd_gdf):,}")
+print(f"\nWithin {RADIUS_WIDE/1000:.0f} km of CBD (wide):")
+print(f"  Ryde: {len(ryde_wide):,} of {len(ryde_gdf):,}")
 
 # Combined GDF for the primary species map (species column preserved)
 combined_near = pd.concat([
     gdf[["geometry", "source", "species"]],
     ryde_near[["geometry", "source", "species"]],
     rbg_near[["geometry", "source", "species"]],
+    usyd_near[["geometry", "source", "species"]],
 ], ignore_index=True)
 combined_near = geopandas.GeoDataFrame(combined_near, crs="EPSG:4326")
 combined_near["species"] = [
@@ -286,7 +316,7 @@ ax.legend(handles=legend_handles, loc="upper right",
           markerscale=2, prop={"size": 5}, labelspacing=0)
 title = (
     f"{len(combined_near):,} Trees — City of Sydney, Royal Botanic Garden, "
-    f"Centennial Parklands, City of Ryde (partial)"
+    f"Centennial Parklands, City of Ryde (partial), University of Sydney"
 )
 ax.set_title(title)
 plt.tight_layout()
@@ -334,6 +364,7 @@ combined_tight = pd.concat([
     gdf[["geometry", "source"]],
     ryde_near[["geometry", "source"]],
     rbg_near[["geometry", "source"]],
+    usyd_near[["geometry", "source"]],
 ], ignore_index=True)
 combined_tight = geopandas.GeoDataFrame(combined_tight, crs="EPSG:4326")
 
@@ -344,6 +375,7 @@ source_styles = {
     "City of Ryde (2013)":   {"color": "C1",        "ms": 1,  "alpha": 0.3,  "z": 2},
     "Mt Annan":              {"color": "C4",        "ms": 3,  "alpha": 0.7,  "z": 3},
     "Mt Tomah":              {"color": "C5",        "ms": 3,  "alpha": 0.7,  "z": 3},
+    "University of Sydney":  {"color": "C3",        "ms": 2,  "alpha": 0.6,  "z": 3},
 }
 
 fig_t, ax = plt.subplots()
@@ -374,15 +406,15 @@ print("Rendering map: combined data — 10 km view…")
 
 combined_wide = pd.concat([
     gdf[["geometry", "source"]],
-    ryde_gdf[["geometry", "source"]],   # all of Ryde, not just 10km slice
+    ryde_wide[["geometry", "source"]],
     rbg_near[["geometry", "source"]],
+    usyd_near[["geometry", "source"]],
 ], ignore_index=True)
 combined_wide = geopandas.GeoDataFrame(combined_wide, crs="EPSG:4326")
 
-# Derive map extent from the 10 km projected buffer (not from data bounds,
-# so the circle is always centred on the CBD regardless of data coverage)
+# Derive map extent from the 20 km projected buffer
 cbd_buffer_4326 = (
-    geopandas.GeoDataFrame(geometry=[cbd_proj.buffer(RADIUS_M + 500)], crs="EPSG:28356")
+    geopandas.GeoDataFrame(geometry=[cbd_proj.buffer(RADIUS_WIDE + 500)], crs="EPSG:28356")
     .to_crs(epsg=4326)
 )
 bx0, by0, bx1, by1 = cbd_buffer_4326.total_bounds
