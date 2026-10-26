@@ -5,7 +5,7 @@ pyproj>=3.8.0             # set_crs() API; dict-style CRS removed
 shapely>=2.0
 
 # Data / numerics
-pandas>=2.0             # DataFrame.append() and .iteritems() removed
+pandas>=3.1.0             # DataFrame.append() and .iteritems() removed
 openpyxl                # pandas Excel support
 
 # Plotting
