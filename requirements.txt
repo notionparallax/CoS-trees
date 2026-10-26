@@ -9,7 +9,7 @@ pandas>=2.0             # DataFrame.append() and .iteritems() removed
 openpyxl                # pandas Excel support
 
 # Plotting
-matplotlib>=3.5
+matplotlib>=3.11.2
 
 # HTTP (used in tree_names.py)
 requests
