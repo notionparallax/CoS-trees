@@ -1,7 +1,7 @@
 # Core spatial stack
 geopandas>=1.0
 geodatasets>=2026.5.1     # replaces the removed geopandas.datasets module
-pyproj>=3.0             # set_crs() API; dict-style CRS removed
+pyproj>=3.8.0             # set_crs() API; dict-style CRS removed
 shapely>=2.0
 
 # Data / numerics
